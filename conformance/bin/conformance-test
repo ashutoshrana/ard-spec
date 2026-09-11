@@ -38,9 +38,11 @@ def print_bullet(msg):
     print(f"  • {msg}")
 
 class ConformanceTester:
-    def __init__(self):
+    def __init__(self, basic=False):
         self.errors = []
         self.warnings = []
+        self.basic = basic
+        self.schema_incomplete = False
         self.jsonschema_available = False
         try:
             import jsonschema
@@ -57,7 +59,10 @@ class ConformanceTester:
         print_warning(msg)
 
     def run_json_schema_validation(self, manifest_data):
+        if self.basic:
+            return True
         if not self.jsonschema_available:
+            self.schema_incomplete = True
             print_warning("Python 'jsonschema' package not installed. Skipping strict JSON Schema check.")
             print_bullet("Tip: Run 'pip install jsonschema' to enable strict schema-level checking.")
             return True
@@ -65,6 +70,7 @@ class ConformanceTester:
         import jsonschema
         schema_path = os.path.join(os.path.dirname(__file__), "../../spec/schemas/ai-catalog.schema.json")
         if not os.path.exists(schema_path):
+            self.schema_incomplete = True
             print_warning(f"Schema file not found at {schema_path}. Skipping JSON Schema validation.")
             return True
 
@@ -78,6 +84,7 @@ class ConformanceTester:
             self.add_error(f"JSON Schema Validation Failed: {e.message} at path '{'.'.join(map(str, e.absolute_path))}'")
             return False
         except Exception as e:
+            self.schema_incomplete = True
             self.add_warning(f"Failed to run JSON Schema validator: {e}")
             return True
 
@@ -94,6 +101,11 @@ class ConformanceTester:
 
         # 2. Strict JSON Schema Validation
         schema_passed = self.run_json_schema_validation(data)
+        if not schema_passed:
+            return False
+        if not isinstance(data, dict):
+            self.add_error("Manifest root must be a JSON object.")
+            return False
 
         # 3. Custom Semantic and Protocol-Specific Validation
         print_bullet("Running custom semantic checks...")
@@ -114,12 +126,15 @@ class ConformanceTester:
 
         print_bullet(f"Found {len(entries)} entries to validate.")
         for idx, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                self.add_error(f"Entry #{idx} must be a JSON object.")
+                continue
             label = entry.get("displayName") or entry.get("identifier") or f"Entry #{idx}"
             print(f"\n  {COLOR_BOLD}Entry: {label}{COLOR_RESET}")
 
             # Required properties
             ident = entry.get("identifier")
-            if not ident:
+            if not isinstance(ident, str) or not ident:
                 self.add_error(f"[{label}] Missing required 'identifier'.")
             else:
                 # URN pattern checks
@@ -356,7 +371,10 @@ def main():
 
     command = sys.argv[1].lower()
     target = sys.argv[2]
-    tester = ConformanceTester()
+    if any(arg != "--basic" for arg in sys.argv[3:]):
+        print_failure("Only --basic is supported after the target.")
+        sys.exit(1)
+    tester = ConformanceTester(basic="--basic" in sys.argv[3:])
 
     if command == "manifest":
         # Handle remote url vs local path
@@ -389,7 +407,11 @@ def main():
     # Summary reporting
     print_header("Conformance Validation Summary")
     if success:
-        print(f"{COLOR_BOLD}{COLOR_GREEN}CONFORMANCE STATUS: PASS{COLOR_RESET}")
+        if tester.schema_incomplete:
+            print_warning("CONFORMANCE STATUS: INCOMPLETE (strict schema validation unavailable)")
+            sys.exit(2)
+        status = "BASIC CHECKS PASSED (schema not checked)" if tester.basic else "PASS (implemented checks only)"
+        print(f"{COLOR_BOLD}{COLOR_GREEN}CONFORMANCE STATUS: {status}{COLOR_RESET}")
         print(f"Validated with 0 critical specification errors and {len(tester.warnings)} warnings.")
         sys.exit(0)
     else:
