@@ -27,7 +27,7 @@ while IFS= read -r -d '' manifest_file; do
 done < <(find "$PROJECT_ROOT/conformance/examples" -type f -name "*.json" -print0)
 
 if [ $MANIFEST_STATUS -eq 0 ]; then
-    echo -e "  ${GREEN}✓ Step 1: All mock manifests are fully spec-compliant!${RESET}"
+    echo -e "  ${GREEN}✓ Step 1: All implemented manifest checks passed.${RESET}"
 else
     echo -e "  ${RED}✗ Step 1: One or more mock manifests failed validation.${RESET}"
     exit 1
@@ -56,12 +56,12 @@ echo -e "\n${BOLD}[Step 3/3] Probing and validating live example registry API...
 REGISTRY_STATUS=$?
 
 if [ $REGISTRY_STATUS -eq 0 ]; then
-    echo -e "  ${GREEN}✓ Step 3: Example registry API matches specification requirements!${RESET}"
+    echo -e "  ${GREEN}✓ Step 3: Example registry API passed implemented probes.${RESET}"
 else
     echo -e "  ${RED}✗ Step 3: Example registry API failed conformance test.${RESET}"
     exit 1
 fi
 
-echo -e "\n${BOLD}${GREEN}=== ALL CONFORMANCE CHECKS PASSED SUCCESSFUL ===${RESET}"
-echo -e "Agentic Resource Discovery implementation is fully compliant."
+echo -e "\n${BOLD}${GREEN}=== ALL IMPLEMENTED CONFORMANCE CHECKS PASSED ===${RESET}"
+echo -e "These probes do not certify complete protocol conformance."
 exit 0

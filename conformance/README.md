@@ -2,7 +2,7 @@
 
 > **Automated compliance checking CLI to validate capability manifests and Registry REST API implementations.**
 
-This directory contains the official, zero-dependency **Conformance Testing CLI Tool** designed to verify that catalogs and discovery registries conform strictly to the **Agentic Resource Discovery** and **ai-catalog** specifications.
+This directory contains the **Conformance Testing CLI Tool**, with optional basic checks and strict schema validation, designed to test implemented requirements for catalogs and discovery registries conforming to the **Agentic Resource Discovery** and **ai-catalog** specifications.
 
 ---
 
@@ -96,7 +96,8 @@ When checking a live Agent Registry server, the tool executes the following prob
 
 The tool outputs standard exit codes, making it ideal for integration into **CI/CD pipelines**, automated git hooks, or test rigs:
 
-* **`0`**: **PASS**. The manifest or registry conforms perfectly to the Agentic Resource Discovery specifications without errors.
+* **`0`**: Implemented checks passed. `--basic` explicitly excludes schema validation and is labeled BASIC, never strict PASS. This is not a certification of complete specification conformance.
+* **`2`**: INCOMPLETE. Strict schema validation was unavailable or failed to run.
 * **`1`**: **FAIL**. The target violates one or more specification constraints. Details of the violations are printed in red to `stderr`.
 
 ---
@@ -107,3 +108,7 @@ For strict schema-level checking, install the Python `jsonschema` validator in y
 pip install jsonschema
 ```
 If present, the tool will automatically activate JSON Schema checking alongside its custom semantic validations.
+
+## Regression checks
+
+`python -m unittest discover -s conformance/tests -v` checks malformed manifests, strict dependency failure, and basic/strict result labels. For dependency-free smoke checks only, append `--basic` to the CLI command.
