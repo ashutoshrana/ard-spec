@@ -1,6 +1,7 @@
 """Exercise the CLI boundary, including runs where site-packages are disabled."""
 
 import json
+import socket
 from pathlib import Path
 import subprocess
 import sys
@@ -13,6 +14,18 @@ MANIFEST = ROOT / "examples/ai-catalog.json"
 
 
 class ConformanceResults(unittest.TestCase):
+    def test_demo_rejects_occupied_registry_port(self):
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 9010))
+            listener.listen()
+            result = subprocess.run(
+                ["bash", str(ROOT / "bin/run-conformance-demo")],
+                capture_output=True, text=True, timeout=15,
+            )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Example registry failed to start", result.stdout + result.stderr)
+        self.assertNotIn("[Step 3/3]", result.stdout)
+
     def run_cli(self, path, *flags, isolated=False):
         return subprocess.run(
             [sys.executable, *(["-S"] if isolated else []), str(CLI), "manifest", str(path), *flags],

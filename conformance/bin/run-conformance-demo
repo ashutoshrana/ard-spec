@@ -49,6 +49,10 @@ trap cleanup EXIT
 
 # Give server a moment to initialize and bind
 sleep 1.5
+if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo "Example registry failed to start; check whether port 9010 is already in use." >&2
+    exit 1
+fi
 
 # 3. Validate live running registry server
 echo -e "\n${BOLD}[Step 3/3] Probing and validating live example registry API...${RESET}"
